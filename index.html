@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🐍 لعبة التعبان</title>
+    <style>
+        /* ----- إعدادات عامة ----- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(145deg, #0b0e1a 0%, #1a1f2f 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* ----- صندوق اللعبة الرئيسي ----- */
+        .game-wrapper {
+            background: #141a26;
+            padding: 30px 35px 35px 35px;
+            border-radius: 48px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.08);
+            border: 1px solid #2e3a4e;
+        }
+
+        .game-container {
+            background: #0f131c;
+            border-radius: 32px;
+            padding: 20px;
+            box-shadow: inset 0 8px 18px rgba(0, 0, 0, 0.7);
+        }
+
+        /* ----- رأس اللعبة (العنوان + النقاط) ----- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px 18px 10px;
+            color: #e4e9f2;
+        }
+
+        .title {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #b3ffb0, #48c78e);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .score-box {
+            background: #1e2638;
+            padding: 10px 24px;
+            border-radius: 60px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #b9e6b0;
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
+            border: 1px solid #38445c;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .score-box span {
+            color: #ffd966;
+            font-size: 26px;
+            min-width: 40px;
+            text-align: center;
+            -webkit-text-fill-color: #ffd966;
+        }
+
+        /* ----- لوحة الرسم (الكانفاس) ----- */
+        canvas {
+            display: block;
+            margin: 0 auto;
+            background: #0b0f17;
+            border-radius: 24px;
+            box-shadow: 0 0 0 2px #293544, 0 12px 28px rgba(0, 0, 0, 0.6);
+            width: 500px;
+            height: 500px;
+        }
+
+        /* ----- أزرار التحكم ----- */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 18px;
+            margin-top: 22px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #222d42;
+            border: none;
+            color: #d4dcec;
+            font-size: 18px;
+            font-weight: 600;
+            padding: 12px 34px;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            box-shadow: 0 6px 0 #0e121c, 0 6px 14px rgba(0, 0, 0, 0.4);
+            border: 1px solid #3e4d66;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            background: #2d3b55;
+            box-shadow: 0 8px 0 #0e121c, 0 10px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #0e121c;
+        }
+
+        .btn-restart {
+            background: #48a86e;
+            color: #fff;
+            border-color: #5fc98a;
+            box-shadow: 0 6px 0 #1f4a2f;
+        }
+
+        .btn-restart:hover {
+            background: #56c07c;
+        }
+
+        /* ----- رسالة انتهاء اللعبة (تظهر فوق الكانفاس) ----- */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(8, 10, 18, 0.82);
+            border-radius: 24px;
+            display: none;
+            /* مخفية افتراضياً */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #ffffff;
+            backdrop-filter: blur(4px);
+            z-index: 10;
+        }
+
+        .overlay.show {
+            display: flex;
+        }
+
+        .overlay h2 {
+            font-size: 44px;
+            margin-bottom: 10px;
+            color: #ff7b7b;
+            text-shadow: 0 0 20px #ff3b3b80;
+        }
+
+        .overlay p {
+            font-size: 22px;
+            background: #1e2638;
+            padding: 12px 32px;
+            border-radius: 60px;
+            border: 1px solid #ff7b7b55;
+        }
+
+        .overlay .final-score {
+            color: #ffd966;
+            font-weight: 800;
+        }
+
+        /* حاوية الكانفاس لوضع الـ overlay فوقه */
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        /* ----- توافق مع الشاشات الصغيرة ----- */
+        @media (max-width: 600px) {
+            .game-wrapper {
+                padding: 15px;
+                border-radius: 30px;
+            }
+            .game-container {
+                padding: 12px;
+            }
+            canvas {
+                width: 340px;
+                height: 340px;
+            }
+            .title {
+                font-size: 20px;
+            }
+            .score-box {
+                font-size: 16px;
+                padding: 6px 16px;
+            }
+            .btn {
+                font-size: 15px;
+                padding: 10px 22px;
+            }
+            .overlay h2 {
+                font-size: 32px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            canvas {
+                width: 280px;
+                height: 280px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-wrapper">
+        <div class="game-container">
+
+            <!-- رأس اللعبة -->
+            <div class="header">
+                <div class="title">🐍 التعبان</div>
+                <div class="score-box">
+                    🍎 النقاط <span id="scoreDisplay">0</span>
+                </div>
+            </div>
+
+            <!-- الكانفاس مع الـ overlay -->
+            <div class="canvas-wrapper">
+                <canvas id="gameCanvas" width="500" height="500"></canvas>
+
+                <!-- طبقة انتهاء اللعبة -->
+                <div class="overlay" id="gameOverOverlay">
+                    <h2>💀 انتهت اللعبة!</h2>
+                    <p> النقاط النهائية: <span class="final-score" id="finalScore">0</span> </p>
+                    <button class="btn btn-restart" id="restartFromOverlayBtn" style="margin-top: 25px;">
+                        🔄 العب مرة أخرى
+                    </button>
+                </div>
+            </div>
+
+            <!-- أزرار التحكم السفلية -->
+            <div class="controls">
+                <button class="btn btn-restart" id="restartBtn">
+                    🔄 إعادة التشغيل
+                </button>
+                <button class="btn" id="pauseToggleBtn">
+                    ⏸️ إيقاف مؤقت
+                </button>
+            </div>
+
+            <div style="text-align: center; margin-top: 14px; color: #5d6f8a; font-size: 14px; letter-spacing: 0.5px;">
+                ⬆️⬇️⬅️➡️ استخدمي الأسهم للتحكم
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================================================================
+        //  منطق لعبة التعبان (Snake)
+        // ================================================================
+
+        (function() {
+            'use strict';
+
+            // ---- عناصر الصفحة ----
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const scoreSpan = document.getElementById('scoreDisplay');
+            const finalScoreSpan = document.getElementById('finalScore');
+            const overlay = document.getElementById('gameOverOverlay');
+            const restartBtn = document.getElementById('restartBtn');
+            const restartOverlayBtn = document.getElementById('restartFromOverlayBtn');
+            const pauseBtn = document.getElementById('pauseToggleBtn');
+
+            // ---- إعدادات اللعبة ----
+            const GRID_SIZE = 20; // 20x20 شبكة
+            const CELL_SIZE = canvas.width / GRID_SIZE; // 25 بكسل
+
+            // متغيرات الحالة
+            let snake = []; // مصفوفة الإحداثيات {x, y}
+            let food = { x: 8, y: 10 };
+            let direction = { dx: 1, dy: 0 }; // الاتجاه الحالي
+            let nextDirection = { dx: 1, dy: 0 };
+            let score = 0;
+            let gameRunning = false;
+            let gamePaused = false;
+            let gameOver = false;
+            let gameInterval = null;
+            const MOVE_INTERVAL_MS = 150;
+
+            // ---- تهيئة اللعبة ----
+            function initGame() {
+                // ثعبان مبدئي (3 خلايا)
+                snake = [
+                    { x: 9, y: 10 },
+                    { x: 8, y: 10 },
+                    { x: 7, y: 10 }
+                ];
+                direction = { dx: 1, dy: 0 };
+                nextDirection = { dx: 1, dy: 0 };
+                score = 0;
+                gameOver = false;
+                gamePaused = false;
+                pauseBtn.textContent = '⏸️ إيقاف مؤقت';
+                overlay.classList.remove('show');
+                updateScore();
+                generateFood();
+                drawCanvas();
+            }
+
+            // ---- توليد طعام عشوائي (بعيداً عن الثعبان) ----
+            function generateFood() {
+                const maxAttempts = 1000;
+                for (let i = 0; i < maxAttempts; i++) {
+                    const newFood = {
+                        x: Math.floor(Math.random() * GRID_SIZE),
+                        y: Math.floor(Math.random() * GRID_SIZE)
+                    };
+                    // تأكد أن الطعام ليس على الثعبان
+                    if (!snake.some(segment => segment.x === newFood.x && segment.y === newFood.y)) {
+                        food = newFood;
+                        return;
+                    }
+                }
+                // إذا فشل (شبه مستحيل) نضعه في مكان ثابت
+                food = { x: 5, y: 5 };
+            }
+
+            // ---- تحديث عرض النقاط ----
+            function updateScore() {
+                scoreSpan.textContent = score;
+                finalScoreSpan.textContent = score;
+            }
+
+            // ---- إنهاء اللعبة ----
+            function endGame() {
+                if (gameOver) return;
+                gameOver = true;
+                gameRunning = false;
+                if (gameInterval) {
+                    clearInterval(gameInterval);
+                    gameInterval = null;
+                }
+                finalScoreSpan.textContent = score;
+                overlay.classList.add('show');
+                drawCanvas(); // إعادة رسم لإظهار آخر حالة
+            }
+
+            // ---- خطوة اللعبة (تحديث المنطق) ----
+            function gameStep() {
+                if (gamePaused || gameOver) return;
+
+                // تطبيق الاتجاه الجديد
+                direction = { ...nextDirection };
+
+                // حساب الرأس الجديد
+                const head = snake[0];
+                const newHead = {
+                    x: head.x + direction.dx,
+                    y: head.y + direction.dy
+                };
+
+                // التحقق من الاصطدام بالجدار
+                if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
+                    endGame();
+                    return;
+                }
+
+                // التحقق من أكل الطعام
+                const isEating = (newHead.x === food.x && newHead.y === food.y);
+
+                // بناء الثعبان الجديد
+                let newSnake = [newHead, ...snake];
+
+                if (!isEating) {
+                    newSnake.pop(); // إزالة الذيل إذا لم يأكل
+                }
+
+                // التحقق من الاصطدام بالذات (الرأس الجديد مع باقي الجسم)
+                const headCollision = newSnake.slice(1).some(segment =>
+                    segment.x === newHead.x && segment.y === newHead.y
+                );
+                if (headCollision) {
+                    endGame();
+                    return;
+                }
+
+                // تحديث الثعبان
+                snake = newSnake;
+
+                // معالجة الأكل
+                if (isEating) {
+                    score++;
+                    updateScore();
+                    generateFood();
+                }
+
+                // إعادة رسم اللوحة
+                drawCanvas();
+            }
+
+            // ---- رسم كل شيء على الكانفاس ----
+            function drawCanvas() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // رسم شبكة خفيفة جداً
+                ctx.strokeStyle = '#1f2a3a';
+                ctx.lineWidth = 0.6;
+                for (let i = 0; i <= GRID_SIZE; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(i * CELL_SIZE, 0);
+                    ctx.lineTo(i * CELL_SIZE, canvas.height);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(0, i * CELL_SIZE);
+                    ctx.lineTo(canvas.width, i * CELL_SIZE);
+                    ctx.stroke();
+                }
+
+                // رسم الطعام
+                ctx.shadowColor = '#ff4d4d';
+                ctx.shadowBlur = 18;
+                ctx.fillStyle = '#ff3b3b';
+                ctx.beginPath();
+                ctx.arc(
+                    food.x * CELL_SIZE + CELL_SIZE / 2,
+                    food.y * CELL_SIZE + CELL_SIZE / 2,
+                    CELL_SIZE / 2 - 2,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+                // إضاءة داخلية للطعام
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = '#ff7a7a';
+                ctx.beginPath();
+                ctx.arc(
+                    food.x * CELL_SIZE + CELL_SIZE / 2 - 2,
+                    food.y * CELL_SIZE + CELL_SIZE / 2 - 2,
+                    CELL_SIZE / 4,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // رسم الثعبان
+                snake.forEach((segment, index) => {
+                    const isHead = (index === 0);
+                    const x = segment.x * CELL_SIZE;
+                    const y = segment.y * CELL_SIZE;
+                    const padding = isHead ? 1 : 2;
+                    const radius = 6;
+
+                    // ظل خفيف
+                    ctx.shadowColor = '#00cc6655';
+                    ctx.shadowBlur = 12;
+
+                    // لون الرأس يختلف
+                    if (isHead) {
+                        ctx.fillStyle = '#a3ffb0';
+                        ctx.shadowColor = '#66ff99';
+                        ctx.shadowBlur = 22;
+                    } else {
+                        // تدرج اللون من الأخضر الفاتح إلى الداكن
+                        const intensity = 0.6 + 0.4 * (index / snake.length);
+                        ctx.fillStyle = `rgb(${40 + 80 * intensity}, ${200 - 40 * intensity}, ${80 + 30 * intensity})`;
+                    }
+
+                    // مربع مدور
+                    ctx.beginPath();
+                    ctx.roundRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4, radius);
+                    ctx.fill();
+
+                    // عيون الرأس
+                    if (isHead) {
+                        ctx.shadowBlur = 0;
+                        ctx.fillStyle = '#0b0f17';
+                        const eyeSize = 4;
+                        let ex1, ey1, ex2, ey2;
+                        if (direction.dx === 1) {
+                            ex1 = x + CELL_SIZE - 8;
+                            ey1 = y + 5;
+                            ex2 = x + CELL_SIZE - 8;
+                            ey2 = y + CELL_SIZE - 5 - eyeSize;
+                        } else if (direction.dx === -1) {
+                            ex1 = x + 4;
+                            ey1 = y + 5;
+                            ex2 = x + 4;
+                            ey2 = y + CELL_SIZE - 5 - eyeSize;
+                        } else if (direction.dy === -1) {
+                            ex1 = x + 5;
+                            ey1 = y + 4;
+                            ex2 = x + CELL_SIZE - 5 - eyeSize;
+                            ey2 = y + 4;
+                        } else {
+                            ex1 = x + 5;
+                            ey1 = y + CELL_SIZE - 8;
+                            ex2 = x + CELL_SIZE - 5 - eyeSize;
+                            ey2 = y + CELL_SIZE - 8;
+                        }
+                        ctx.fillRect(ex1, ey1, eyeSize, eyeSize);
+                        ctx.fillRect(ex2, ey2, eyeSize, eyeSize);
+                    }
+                });
+
+                ctx.shadowBlur = 0;
+
+                // إذا كانت اللعبة متوقفة مؤقتاً نكتب رسالة
+                if (gamePaused && !gameOver) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                    ctx.font = 'bold 32px "Segoe UI", Arial, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('⏸️ متوقفة مؤقتاً', canvas.width / 2, canvas.height / 2);
+                }
+            }
+
+            // دالة مساعدة لرسم مربع مدور (polyfill للـ Canvas)
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if (w < 2 * r) r = w / 2;
+                if (h < 2 * r) r = h / 2;
+                this.moveTo(x + r, y);
+                this.lineTo(x + w - r, y);
+                this.quadraticCurveTo(x + w, y, x + w, y + r);
+                this.lineTo(x + w, y + h - r);
+                this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                this.lineTo(x + r, y + h);
+                this.quadraticCurveTo(x, y + h, x, y + h - r);
+                this.lineTo(x, y + r);
+                this.quadraticCurveTo(x, y, x + r, y);
+                this.closePath();
+                return this;
+            };
+
+            // ---- بدء حلقة اللعبة ----
+            function startGameLoop() {
+                if (gameInterval) {
+                    clearInterval(gameInterval);
+                    gameInterval = null;
+                }
+                gameRunning = true;
+                gameInterval = setInterval(() => gameStep(), MOVE_INTERVAL_MS);
+            }
+
+            // ---- إعادة تشغيل اللعبة بالكامل ----
+            function restartGame() {
+                // إيقاف أي مؤقت قديم
+                if (gameInterval) {
+                    clearInterval(gameInterval);
+                    gameInterval = null;
+                }
+                initGame();
+                startGameLoop();
+            }
+
+            // ---- تبديل حالة الإيقاف المؤقت ----
+            function togglePause() {
+                if (gameOver) return;
+                gamePaused = !gamePaused;
+                pauseBtn.textContent = gamePaused ? '▶️ استئناف' : '⏸️ إيقاف مؤقت';
+                drawCanvas(); // لتحديث الرسالة فوق الكانفاس
+            }
+
+            // ---- التحكم عبر لوحة المفاتيح ----
+            function handleKeyDown(e) {
+                const key = e.key;
+                // منع التمرير باستخدام الأسهم
+                if (key.startsWith('Arrow')) {
+                    e.preventDefault();
+                }
+
+                // منع تغيير الاتجاه إذا كانت اللعبة منتهية أو موقفة (لكن نسمح بالبدء)
+                if (gameOver) return;
+
+                // تحديد الاتجاه الجديد (منع الرجوع للخلف)
+                const isHorizontal = direction.dx !== 0;
+                const isVertical = direction.dy !== 0;
+
+                switch (key) {
+                    case 'ArrowUp':
+                        if (!isVertical) nextDirection = { dx: 0, dy: -1 };
+                        break;
+                    case 'ArrowDown':
+                        if (!isVertical) nextDirection = { dx: 0, dy: 1 };
+                        break;
+                    case 'ArrowLeft':
+                        if (!isHorizontal) nextDirection = { dx: -1, dy: 0 };
+                        break;
+                    case 'ArrowRight':
+                        if (!isHorizontal) nextDirection = { dx: 1, dy: 0 };
+                        break;
+                    case ' ':
+                        // مفتاح المسافة لتشغيل/إيقاف مؤقت
+                        e.preventDefault();
+                        togglePause();
+                        break;
+                }
+            }
+
+            // ---- بدء اللعبة لأول مرة ----
+            function startGame() {
+                initGame();
+                startGameLoop();
+                // إضافة مستمعات الأحداث
+                window.addEventListener('keydown', handleKeyDown);
+            }
+
+            // ---- ربط الأزرار ----
+            restartBtn.addEventListener('click', restartGame);
+            restartOverlayBtn.addEventListener('click', restartGame);
+            pauseBtn.addEventListener('click', togglePause);
+
+            // ---- تشغيل اللعبة ----
+            startGame();
+
+            // ---- تنظيف عند إغلاق الصفحة (اختياري) ----
+            window.addEventListener('beforeunload', function() {
+                if (gameInterval) clearInterval(gameInterval);
+            });
+
+        })();
+    </script>
+
+</body>
+</html>
